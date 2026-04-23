@@ -109,8 +109,60 @@ def generate_fm_iq(audio_file, out_file="fm.iq", max_dev=75000):
 The generated \texttt{.iq} files are then transmitted using the hardware driver, allowing any RTL-SDR receiver to demodulate the audio using standard AM/WFM protocols.
 
 \section{Digital Modulation and Multipath Analysis}
-To advance beyond analog audio, we constructed a digital modulation pipeline. Binary data is mapped to discrete states of phase and amplitude. Phase-Shift Keying (BPSK and QPSK) schemes were implemented and successfully demodulated over the air with high  integrity. 
+To advance beyond analog audio, we constructed a digital modulation pipeline. Binary data is mapped to discrete states of phase and amplitude.
+\subsection{Frequency-Shift Keying (FSK)}
+Frequency-Shift Keying (FSK) represents binary data through discrete changes in the frequency of the carrier wave. Similar to analog FM, we calculate the continuous phase by integrating the discrete frequency shifts. 
 
+\begin{lstlisting}[language=Python, caption={2-FSK Generation via Frequency Integration}]
+import numpy as np
+
+def generate_fsk_iq(num_symbols=1000, out_file="fsk.iq", deviation=5000, fs=48000):
+    # Map binary data to frequency shifts (-deviation, +deviation)
+    data = np.random.randint(0, 2, num_symbols)
+    
+    # Upsample to create continuous symbols in time
+    sps = 10 
+    upsampled_data = np.repeat(data, sps)
+    freq_signal = np.where(upsampled_data == 0, -deviation, deviation)
+    
+    # Integrate frequency to get instantaneous phase
+    dt = 1.0 / fs
+    phase = 2 * np.pi * np.cumsum(freq_signal) * dt
+    
+    # Generate complex baseband signal
+    iq_fsk = np.exp(1j * phase)
+    iq_fsk.astype(np.complex64).tofile(out_file)
+\end{lstlisting}
+\subsection{Binary Phase-Shift Keying (BPSK)}
+Binary Phase-Shift Keying (BPSK) was implemented as the fundamental baseline for digital I/Q constellations. It maps binary zeros and ones directly to $180^\circ$ phase shifts (+1 and -1 on the real axis). To confine the infinite bandwidth caused by instantaneous phase switching, a Root Raised Cosine (RRC) pulse-shaping filter was applied.
+
+\begin{lstlisting}[language=Python, caption={BPSK Mapping and RRC Pulse Shaping}]
+import numpy as np
+
+def generate_bpsk_iq(num_symbols=1000, out_file="bpsk.iq"):
+    # BPSK Constellation Mapping (0 -> -1+0j, 1 -> +1+0j)
+    data = np.random.randint(0, 2, num_symbols)
+    symbols = np.where(data == 0, -1+0j, 1+0j)
+    
+    # Upsample (Samples per symbol = 4)
+    sps = 4
+    upsampled = np.zeros(len(symbols) * sps, dtype=complex)
+    upsampled[::sps] = symbols
+    
+    # Simplified RRC Filter parameters
+    beta = 0.35
+    num_taps = 41
+    t = np.arange(-num_taps//2, num_taps//2 + 1)
+    
+    # RRC Impulse Response
+    h = np.sinc(t/sps) * np.cos(np.pi*beta*t/sps) / (1 - (2*beta*t/sps)**2)
+    h[num_taps//2] = 1 - beta + 4*beta/np.pi
+    
+    # Apply filter and export
+    iq_signal = np.convolve(upsampled, h)
+    iq_signal.astype(np.complex64).tofile(out_file)
+\end{lstlisting}
+The generated BPSK signals were successfully demodulated over the air with high integrity, validating both the software filtering and hardware phase control.
 \subsection{16-QAM Theoretical Implementation}
 To maximise spectral efficiency, we implemented 16-Quadrature Amplitude Modulation (16-QAM), which transmits 4 bits per symbol across 16 distinct I/Q coordinates. To constrain the infinite bandwidth caused by instant digital switching, a Root Raised Cosine (RRC) pulse-shaping filter was applied.
 
