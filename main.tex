@@ -41,7 +41,7 @@ Email: gadepall@ee.iith.ac.in}
 \maketitle
 
 \begin{abstract}
-This paper details the implementation of a bare-metal Software-Defined Radio (SDR) utilising a standard Raspberry Pi as an RF transmitter and an RTL-SDR as a receiver. Building upon existing hardware analysis of the Pi-FM architecture, this work introduces the mathematical and programmatic generation of both analog (AM/FM) and digital (16-QAM) Baseband I/Q signals using Python. While the software-defined theoretical execution of the 16-QAM baseband was flawless, real-world over-the-air transmission demonstrated severe signal degradation. We analyse the physical bottleneck of multipath fading, demonstrating how indoor reflections destructively interfere with phase and amplitude integrity. 
+This paper details the implementation of a bare-metal Software-Defined Radio (SDR) utilising a standard Raspberry Pi as an RF transmitter and an RTL-SDR as a receiver. Building upon existing hardware analysis of the Pi-FM architecture, this work introduces the mathematical and programmatic generation of both analog (AM/FM) and digital (16-QAM) Baseband I/Q signals using Python. While the software-defined theoretical execution of the 16-QAM baseband was flawless, real-world over-the-air transmission demonstrated severe signal degradation. %We analyse the physical bottleneck of multipath fading, demonstrating how indoor reflections destructively interfere with phase and amplitude integrity. 
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -79,7 +79,7 @@ Complex digital modulation, such as 16-QAM or Single-Sideband (SSB), requires th
 
 By heavily utilising the DMA controller to synchronise both the PLL registers (for phase/frequency) and the PWM peripheral (for amplitude) at multi-megahertz clock speeds, \texttt{rpitx} essentially transforms the Raspberry Pi into a universal, programmable RF transmitter.
 \section{Analog Baseband Generation}
-While the \texttt{rpitx} library natively handles audio files, true SDR engineering requires generating the mathematical Complex Baseband (I/Q) arrays before handing them to the hardware. 
+We generate the mathematical Complex Baseband (I/Q) arrays before handing them to the hardware. 
 
 \subsection{AM and FM Modulation in Python}
 To broadcast analog audio, we map the varying amplitudes of a standard \texttt{.wav} file into In-Phase (I) and Quadrature (Q) arrays. For Amplitude Modulation (AM), the audio envelope simply scales the I-channel. For Frequency Modulation (FM), the integral of the audio signal dictates the instantaneous phase shift.
@@ -109,7 +109,7 @@ def generate_fm_iq(audio_file, out_file="fm.iq", max_dev=75000):
 The generated \texttt{.iq} files are then transmitted using the hardware driver, allowing any RTL-SDR receiver to demodulate the audio using standard AM/WFM protocols.
 
 \section{Digital Modulation and Multipath Analysis}
-To advance beyond analog audio, we constructed a digital modulation pipeline. Binary data is mapped to discrete states of phase and amplitude. Phase-Shift Keying (BPSK and QPSK) schemes were implemented and successfully demodulated over the air with high symbol integrity. 
+To advance beyond analog audio, we constructed a digital modulation pipeline. Binary data is mapped to discrete states of phase and amplitude. Phase-Shift Keying (BPSK and QPSK) schemes were implemented and successfully demodulated over the air with high  integrity. 
 
 \subsection{16-QAM Theoretical Implementation}
 To maximise spectral efficiency, we implemented 16-Quadrature Amplitude Modulation (16-QAM), which transmits 4 bits per symbol across 16 distinct I/Q coordinates. To constrain the infinite bandwidth caused by instant digital switching, a Root Raised Cosine (RRC) pulse-shaping filter was applied.
@@ -150,14 +150,14 @@ def generate_16qam_iq(num_symbols=1000, out_file="16qam.iq"):
 \end{lstlisting}
 
 \subsection{Over-The-Air Multipath Degradation}
-The mathematical theory and programmatic execution of the 16-QAM transmitter were entirely flawless. In a simulated, closed-loop wired environment, a GNU Radio receiver perfectly demodulated the signal, displaying 16 distinct, tightly clustered dots on the constellation sink.
+The mathematical theory and execution of the 16-QAM transmitter were entirely flawless. In a simulated, closed-loop wired environment, a GNU Radio receiver perfectly demodulated the signal, displaying 16 distinct, tightly clustered dots on the constellation sink.
 
 However, during real-world, Over-The-Air (OTA) testing within an indoor environment, the reception drastically failed. The GNU Radio constellation exploded into a blurry, scattered cloud, making it impossible to decode the 16 individual states. 
 
-This failure was not a result of faulty code, but rather a direct observation of \textbf{Multipath Fading}. As the 16-QAM signal propagated through the room, the radio waves reflected off walls, desks, and surrounding objects. Reflected waves arriving microseconds later altered the phase of the primary signal, while destructive interference altered the amplitude. Because QAM inherently relies on the strict, unaltered preservation of both phase and amplitude to differentiate tightly packed symbols, these room reflections thoroughly scrambled the transmission. This physical bottleneck highlights the necessity of advanced equalisation techniques or Orthogonal Frequency-Division Multiplexing (OFDM) for reliable high-order QAM deployment.
+This was due to Multipath Fading. As the 16-QAM signal propagated through the room, the radio waves reflected off the surroundings. Reflected waves arriving microseconds later altered the phase of the primary signal, while destructive interference altered the amplitude. Because QAM inherently relies on the strict, unaltered preservation of both phase and amplitude to differentiate tightly packed symbols, these room reflections thoroughly scrambled the transmission. Advanced error correction may be needed to perform OTA reliably.
 
 \section{Conclusion}
-This work successfully bridged the gap between purely theoretical digital signal processing and physical hardware deployment. Using the Pi-FM hardware architecture evaluated by Aditya and Suraj, we successfully coded and transmitted complex analog and digital Baseband arrays from scratch. Most notably, the 16-QAM deployment served as a profound practical demonstration of multipath fading, proving that while software mathematical execution can be flawless, real-world RF engineering is ultimately governed by the challenging physics of the physical channel.
+This work successfully bridged the gap between purely theoretical digital signal processing and physical hardware deployment. Using the Pi-FM hardware architecture evaluated by Aditya and Suraj, we successfully coded and transmitted complex analog and digital Baseband arrays from scratch. Most notably, the 16-QAM deployment served as a practical demonstration of multipath fading.
 
 \begin{thebibliography}{00}
 \bibitem{hw_analysis} Appana, A. and Suraj, N., \emph{The Raspberry Pi FM Transmitter (Pi-FM) Deep Dive: PLLC, DMA, and Signal Generation}. Hardware Analysis Report, Feb 16, 2026.
